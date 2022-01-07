@@ -58,6 +58,11 @@
     <li>{{comment}}</li>
     {% endfor %}
   </ul>
+  <form action={% url 'comment_add' listing.id %} method="post">
+    {% csrf_token %}
+    {{addCommentForm|crispy}}
+    <button type="submit" class="btn btn-success">Submit</button>
+  </form>
   {% if listing.terminated %}<p>Cant add more comments, Listing terminated</p>{% endif %}
 </div>
 

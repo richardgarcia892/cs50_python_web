@@ -2,9 +2,9 @@ from django import forms
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from django.forms.widgets import NumberInput
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import redirect, render
+from django.forms.widgets import NumberInput, Textarea
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
 from django.urls import reverse
 
 from .models import User, Category, Listing, Bid, Comment
@@ -19,6 +19,9 @@ class NewListingForm(forms.Form):
 
 class PlaceBidForm(forms.Form):
   amount = forms.FloatField(required=True, widget=NumberInput())
+
+class AddCommentForm(forms.Form):
+  message = forms.CharField(max_length=500, required=True, widget=Textarea())
 
 def index(request):
     Listing.objects.all()
@@ -79,9 +82,15 @@ def register(request):
         return render(request, "auctions/register.html")
 
 
-def listing_list(request):
-    print()
+def category_list(request):
+    return render(request,'auctions/list_categories.html', {
+      'categories': Category.objects.all()
+    })
 
+def listing_bycategory(request, id):
+  return render(request,'auctions/index.html', {
+    'listings': Listing.objects.filter(category=id)
+  })
 
 def listing_details(request, id):
     listing = Listing.objects.get(id=id)
@@ -94,7 +103,8 @@ def listing_details(request, id):
         "bids": listing.bid_set.all(),
         "winning_bid": winning_bid,
         "comments": listing.comment_set.all(),
-        "placeBidForm": PlaceBidForm()
+        "placeBidForm": PlaceBidForm(),
+        "addCommentForm": AddCommentForm()
     })
 
 
@@ -156,10 +166,21 @@ def bid_add(request, id):
         bid.save()
         return HttpResponseRedirect(reverse("listing_details", args=[listing.id]))
 
+@login_required
+def comment_add(request, id):
+  if request.method == 'POST':
+    form = AddCommentForm(request.POST)
+    if form.is_valid():
+      form.clean()
+      message = form.cleaned_data['message']
+      listing = Listing.objects.get(pk=id)
+      comment = Comment(message=message, user=request.user, listing=listing).save()
+      return HttpResponseRedirect(reverse("listing_details", args=[listing.id]))
 
 @login_required
 def watchlist(request):
-    print()
+    return render(request, "auctions/index.html", {'listings': request.user.watch_list.all()
+    })
 
 
 @login_required
