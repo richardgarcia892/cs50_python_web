@@ -1,0 +1,76 @@
+{% extends "auctions/layout.html" %}
+{% load crispy_forms_tags %}
+
+{% block body %}
+<h2>{{listing.title}}</h2>
+{% if listing.winner == user %}
+<h3>Contragulations! You won!</h3>
+{% endif %}
+<p>Descripcion: {{listing.description}}</p>
+<p>Starting bid: {{listing.starting_bid}}</p>
+<p>Image: {{listing.image}}</p>
+<p>Created at: {{listing.created}}</p>
+<p>Updated at: {{listing.modified}}</p>
+<p>submitted by user: {{listing.user}}</p>
+{% if listing.category %}<p>Category: {{listing.category}}</p>{% endif %}
+{% if listing.winner %}<p>winner: {{listing.winner}}</p>{% endif %}
+
+{% if listing.user == user and listing.terminated is False %}
+<div id='owner'>
+  <h3>Owner panel</h3>
+  <form action={% url 'listing_terminate' listing.id %} method="post">
+    {% csrf_token %}
+    <input type="submit" class="btn btn-success" value="Finish listing">
+  </form>
+</div>
+{% endif %}
+
+<div id='bids'>
+  <h3>Bids</h3>
+  <ul>
+    {% if listing.terminated is False %}
+    {% for bid in bids %}
+    <li>{{bid}}</li>
+    {% empty %}
+    <p>No bids so far</p>
+    {% endfor %}
+    {% if bids.count > 0 %}
+    <li id='winning_bid'> Winning Bid: {{winning_bid.amount}} - {{winning_bid.user}} | {{winning_bid.created}} </li>
+    {% endif %}
+    {% elif listing.terminated %}
+    <li id='winning_bid'> Winning Bid: {{winning_bid.amount}} - {{winning_bid.user}} | {{winning_bid.created}} </li>
+    {% endif %}
+  </ul>
+  {% if user.is_authenticated and listing.user != user and listing.terminated is False %}
+  <h4>Place a bid!</h4>
+  <form action={% url 'bid_add' listing.id %} method="post">
+    {% csrf_token %}
+    {{placeBidForm|crispy}}
+    <button type="submit" class="btn btn-success">Submit</button>
+  </form>
+  {% endif %}
+</div>
+
+<div id='comments'>
+  <h2> Comments </h2>
+  <ul>
+    {% for comment in comments %}
+    <li>{{comment}}</li>
+    {% endfor %}
+  </ul>
+  {% if listing.terminated %}<p>Cant add more comments, Listing terminated</p>{% endif %}
+</div>
+
+{% if listing.terminated %}
+<p>listing Terminated</p>
+{% else %}
+{% if user.is_authenticated %}
+{% if user not in listing.watching.all %}
+<p><a class="nav-link" href="{% url 'watchlist_add' listing.id %}">Add Item to Watchlist</a></p>
+{% elif user in listing.watching.all %}
+<p><a class="nav-link" href="{% url 'watchlist_remove' listing.id %}">remove item from Watchlist</a></p>{% endif %}
+{% endif %}
+
+{% endif %}
+
+{% endblock %}
